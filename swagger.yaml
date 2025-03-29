@@ -1,0 +1,179 @@
+swagger: "2.0"
+info:
+  title: "Person Enrichment Service API"
+  description: "API для управления данными о людях с обогащением информации"
+  version: "1.0.0"
+host: "localhost:8080"
+basePath: "/"
+schemes:
+  - "http"
+paths:
+  /persons:
+    get:
+      summary: "Get list of persons"
+      description: "Returns a paginated list of persons with optional filters"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "limit"
+          in: "query"
+          description: "Number of items to return"
+          type: "integer"
+          default: 10
+        - name: "offset"
+          in: "query"
+          description: "Number of items to skip"
+          type: "integer"
+          default: 0
+        - name: "name"
+          in: "query"
+          description: "Filter by name"
+          type: "string"
+        - name: "surname"
+          in: "query"
+          description: "Filter by surname"
+          type: "string"
+      responses:
+        200:
+          description: "Successful response"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Person"
+        400:
+          description: "Invalid parameters"
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      summary: "Create a new person"
+      description: "Creates a new person and enriches their data"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "person"
+          in: "body"
+          description: "Person data to create"
+          required: true
+          schema:
+            $ref: "#/definitions/PersonRequest"
+      responses:
+        201:
+          description: "Person created"
+          schema:
+            $ref: "#/definitions/Person"
+        400:
+          description: "Invalid request body"
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/Error"
+  /persons/{id}:
+    put:
+      summary: "Update a person"
+      description: "Updates an existing person by ID"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Person ID"
+          required: true
+          type: "integer"
+        - name: "person"
+          in: "body"
+          description: "Updated person data"
+          required: true
+          schema:
+            $ref: "#/definitions/Person"
+      responses:
+        200:
+          description: "Person updated"
+          schema:
+            $ref: "#/definitions/Person"
+        400:
+          description: "Invalid request"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Person not found"
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/Error"
+    delete:
+      summary: "Delete a person"
+      description: "Deletes a person by ID"
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Person ID"
+          required: true
+          type: "integer"
+      responses:
+        204:
+          description: "Person deleted"
+        400:
+          description: "Invalid ID"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Person not found"
+          schema:
+            $ref: "#/definitions/Error"
+        500:
+          description: "Internal server error"
+          schema:
+            $ref: "#/definitions/Error"
+definitions:
+  Person:
+    type: "object"
+    properties:
+      id:
+        type: "integer"
+      name:
+        type: "string"
+      surname:
+        type: "string"
+      patronymic:
+        type: "string"
+      age:
+        type: "integer"
+      gender:
+        type: "string"
+      nationality:
+        type: "string"
+    required:
+      - "id"
+      - "name"
+      - "surname"
+  PersonRequest:
+    type: "object"
+    properties:
+      name:
+        type: "string"
+      surname:
+        type: "string"
+      patronymic:
+        type: "string"
+    required:
+      - "name"
+      - "surname"
+  Error:
+    type: "object"
+    properties:
+      error:
+        type: "string"
+    required:
+      - "error"

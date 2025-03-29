@@ -1,0 +1,179 @@
+definitions:
+  models.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  models.Person:
+    properties:
+      age:
+        type: integer
+      gender:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      nationality:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    type: object
+  models.PersonRequest:
+    properties:
+      name:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    required:
+    - name
+    - surname
+    type: object
+info:
+  contact: {}
+paths:
+  /persons:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of persons with optional filters by name
+        and surname
+      parameters:
+      - default: 10
+        description: Number of items to return
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by name
+        in: query
+        name: name
+        type: string
+      - description: Filter by surname
+        in: query
+        name: surname
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Person'
+            type: array
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get list of persons
+      tags:
+      - persons
+    post:
+      consumes:
+      - application/json
+      description: Creates a new person and enriches their data with age, gender,
+        and nationality
+      parameters:
+      - description: Person data to create
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/models.PersonRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Person'
+        "400":
+          description: Invalid request body
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Create a new person
+      tags:
+      - persons
+  /persons/{id}:
+    delete:
+      description: Deletes a person by ID
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: Person deleted
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Person not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Delete a person
+      tags:
+      - persons
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing person by ID
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Updated person data
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/models.Person'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Person'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Person not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Update a person
+      tags:
+      - persons
+swagger: "2.0"
