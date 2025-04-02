@@ -20,23 +20,24 @@ type Handler struct {
 	enrich *service.EnrichmentService
 }
 
-func StartServer(db *sql.DB) error {
+func StartServer(db *sql.DB, addr string) error {
 	r := gin.Default()
 	h := &Handler{db: db, enrich: &service.EnrichmentService{}}
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	r.GET("/persons", h.GetPersons)
 	r.POST("/persons", h.CreatePerson)
+	r.PATCH("/persons/:id", h.PatchPerson)
 	r.PUT("/persons/:id", h.UpdatePerson)
 	r.DELETE("/persons/:id", h.DeletePerson)
 
-	logrus.Info("Server starting on :8080")
-	return r.Run(":8080")
+	logrus.WithField("addr", addr).Info("Server starting")
+	return r.Run(addr)
 }
 
 // GetPersons godoc
 // @Summary Get list of persons
-// @Description Returns a paginated list of persons with optional filters by name and surname
+// @Description Returns a paginated list of persons with optional filters
 // @Tags persons
 // @Accept json
 // @Produce json
@@ -44,6 +45,10 @@ func StartServer(db *sql.DB) error {
 // @Param offset query int false "Number of items to skip" default(0)
 // @Param name query string false "Filter by name"
 // @Param surname query string false "Filter by surname"
+// @Param patronymic query string false "Filter by patronymic"
+// @Param age query int false "Filter by age"
+// @Param gender query string false "Filter by gender" Enums(male, female, other)
+// @Param nationality query string false "Filter by nationality"
 // @Success 200 {array} models.Person
 // @Failure 400 {object} models.ErrorResponse "Invalid parameters"
 // @Failure 500 {object} models.ErrorResponse "Internal server error"
@@ -54,6 +59,10 @@ func (h *Handler) GetPersons(c *gin.Context) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	nameFilter := c.Query("name")
 	surnameFilter := c.Query("surname")
+	patronymicFilter := c.Query("patronymic")
+	ageStr := c.Query("age")
+	genderFilter := c.Query("gender")
+	nationalityFilter := c.Query("nationality")
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -69,6 +78,17 @@ func (h *Handler) GetPersons(c *gin.Context) {
 		return
 	}
 
+	var ageFilter *int
+	if ageStr != "" {
+		age, err := strconv.Atoi(ageStr)
+		if err != nil {
+			logrus.WithField("age", ageStr).Error("Invalid age parameter")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid age parameter"})
+			return
+		}
+		ageFilter = &age
+	}
+
 	query := "SELECT id, name, surname, patronymic, age, gender, nationality FROM persons WHERE 1=1"
 	var args []interface{}
 	argCount := 1
@@ -81,6 +101,26 @@ func (h *Handler) GetPersons(c *gin.Context) {
 	if surnameFilter != "" {
 		query += " AND surname = $" + strconv.Itoa(argCount)
 		args = append(args, surnameFilter)
+		argCount++
+	}
+	if patronymicFilter != "" {
+		query += " AND patronymic = $" + strconv.Itoa(argCount)
+		args = append(args, patronymicFilter)
+		argCount++
+	}
+	if ageFilter != nil {
+		query += " AND age = $" + strconv.Itoa(argCount)
+		args = append(args, *ageFilter)
+		argCount++
+	}
+	if genderFilter != "" {
+		query += " AND gender = $" + strconv.Itoa(argCount)
+		args = append(args, genderFilter)
+		argCount++
+	}
+	if nationalityFilter != "" {
+		query += " AND nationality = $" + strconv.Itoa(argCount)
+		args = append(args, nationalityFilter)
 		argCount++
 	}
 
@@ -165,6 +205,114 @@ func (h *Handler) CreatePerson(c *gin.Context) {
 
 	logrus.WithField("id", person.ID).Info("Person successfully created")
 	c.JSON(http.StatusCreated, person)
+}
+
+// PatchPerson godoc
+// @Summary Partially update a person
+// @Description Updates specific fields of an existing person by ID
+// @Tags persons
+// @Accept json
+// @Produce json
+// @Param id path int true "Person ID"
+// @Param person body models.PersonPatch true "Fields to update"
+// @Success 200 {object} models.Person
+// @Failure 400 {object} models.ErrorResponse "Invalid request"
+// @Failure 404 {object} models.ErrorResponse "Person not found"
+// @Failure 500 {object} models.ErrorResponse "Internal server error"
+// @Router /persons/{id} [patch]
+func (h *Handler) PatchPerson(c *gin.Context) {
+	logrus.Info("Received PATCH /persons/:id request")
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		logrus.WithField("id", idStr).Error("Invalid ID parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		return
+	}
+
+	var patch models.PersonPatch
+	if err := c.ShouldBindJSON(&patch); err != nil {
+		logrus.WithError(err).Error("Invalid request body")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+
+	logrus.WithFields(logrus.Fields{
+		"id":    id,
+		"patch": patch,
+	}).Debug("Parsed patch person request")
+
+	query := "UPDATE persons SET "
+	var args []interface{}
+	argCount := 1
+
+	if patch.Name != nil {
+		query += "name = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Name)
+		argCount++
+	}
+	if patch.Surname != nil {
+		query += "surname = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Surname)
+		argCount++
+	}
+	if patch.Patronymic != nil {
+		query += "patronymic = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Patronymic)
+		argCount++
+	}
+	if patch.Age != nil {
+		query += "age = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Age)
+		argCount++
+	}
+	if patch.Gender != nil {
+		query += "gender = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Gender)
+		argCount++
+	}
+	if patch.Nationality != nil {
+		query += "nationality = $" + strconv.Itoa(argCount) + ", "
+		args = append(args, *patch.Nationality)
+		argCount++
+	}
+
+	if argCount == 1 {
+		logrus.WithField("id", id).Error("No fields to update")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+		return
+	}
+
+	query = query[:len(query)-2]
+	query += " WHERE id = $" + strconv.Itoa(argCount)
+	args = append(args, id)
+
+	logrus.WithField("id", id).Debug("Updating person in database")
+	result, err := h.db.Exec(query, args...)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to update person")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update person"})
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		logrus.WithField("id", id).Warn("Person not found")
+		c.JSON(http.StatusNotFound, gin.H{"error": "Person not found"})
+		return
+	}
+
+	var updatedPerson models.Person
+	err = h.db.QueryRow("SELECT id, name, surname, patronymic, age, gender, nationality FROM persons WHERE id = $1", id).
+		Scan(&updatedPerson.ID, &updatedPerson.Name, &updatedPerson.Surname, &updatedPerson.Patronymic, &updatedPerson.Age, &updatedPerson.Gender, &updatedPerson.Nationality)
+	if err != nil {
+		logrus.WithError(err).Error("Failed to fetch updated person")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch updated person"})
+		return
+	}
+
+	logrus.WithField("id", id).Info("Person successfully updated")
+	c.JSON(http.StatusOK, updatedPerson)
 }
 
 // UpdatePerson godoc

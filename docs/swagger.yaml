@@ -9,9 +9,32 @@ definitions:
       age:
         type: integer
       gender:
+        enum:
+        - male
+        - female
+        - other
         type: string
       id:
         type: integer
+      name:
+        type: string
+      nationality:
+        type: string
+      patronymic:
+        type: string
+      surname:
+        type: string
+    type: object
+  models.PersonPatch:
+    properties:
+      age:
+        type: integer
+      gender:
+        enum:
+        - male
+        - female
+        - other
+        type: string
       name:
         type: string
       nationality:
@@ -40,8 +63,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns a paginated list of persons with optional filters by name
-        and surname
+      description: Returns a paginated list of persons with optional filters
       parameters:
       - default: 10
         description: Number of items to return
@@ -60,6 +82,26 @@ paths:
       - description: Filter by surname
         in: query
         name: surname
+        type: string
+      - description: Filter by patronymic
+        in: query
+        name: patronymic
+        type: string
+      - description: Filter by age
+        in: query
+        name: age
+        type: integer
+      - description: Filter by gender
+        enum:
+        - male
+        - female
+        - other
+        in: query
+        name: gender
+        type: string
+      - description: Filter by nationality
+        in: query
+        name: nationality
         type: string
       produces:
       - application/json
@@ -136,6 +178,44 @@ paths:
           schema:
             $ref: '#/definitions/models.ErrorResponse'
       summary: Delete a person
+      tags:
+      - persons
+    patch:
+      consumes:
+      - application/json
+      description: Updates specific fields of an existing person by ID
+      parameters:
+      - description: Person ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Fields to update
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/models.PersonPatch'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Person'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "404":
+          description: Person not found
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Partially update a person
       tags:
       - persons
     put:

@@ -25,8 +25,9 @@ func main() {
 		logrus.Fatal("Failed to run migrations: ", err)
 	}
 
-	logrus.Info("Starting server on :8080")
-	if err := api.StartServer(database); err != nil {
+	serverAddr := db.GetEnv("SERVER_ADDR", ":8080")
+	logrus.WithField("addr", serverAddr).Info("Starting server")
+	if err := api.StartServer(database, serverAddr); err != nil {
 		logrus.Fatal("Server failed: ", err)
 	}
 }

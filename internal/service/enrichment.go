@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Krchnk/EffectiveMobileFullNameTest/internal/db"
 	"github.com/Krchnk/EffectiveMobileFullNameTest/internal/models"
 	"github.com/sirupsen/logrus"
 )
@@ -14,7 +15,8 @@ type EnrichmentService struct{}
 func (s *EnrichmentService) EnrichPerson(person *models.Person) error {
 	logrus.WithField("name", person.Name).Info("Starting enrichment process for person")
 
-	if age, err := getAge(person.Name); err == nil {
+	ageAPI := db.GetEnv("AGE_API_URL", "https://api.agify.io")
+	if age, err := getAge(person.Name, ageAPI); err == nil {
 		person.Age = &age
 		logrus.WithField("name", person.Name).Debug("Successfully enriched with age")
 	} else {
@@ -24,7 +26,8 @@ func (s *EnrichmentService) EnrichPerson(person *models.Person) error {
 		}).Warn("Failed to enrich age")
 	}
 
-	if gender, err := getGender(person.Name); err == nil {
+	genderAPI := db.GetEnv("GENDER_API_URL", "https://api.genderize.io")
+	if gender, err := getGender(person.Name, genderAPI); err == nil {
 		person.Gender = &gender
 		logrus.WithField("name", person.Name).Debug("Successfully enriched with gender")
 	} else {
@@ -34,7 +37,8 @@ func (s *EnrichmentService) EnrichPerson(person *models.Person) error {
 		}).Warn("Failed to enrich gender")
 	}
 
-	if nationality, err := getNationality(person.Name); err == nil {
+	nationalityAPI := db.GetEnv("NATIONALITY_API_URL", "https://api.nationalize.io")
+	if nationality, err := getNationality(person.Name, nationalityAPI); err == nil {
 		person.Nationality = &nationality
 		logrus.WithField("name", person.Name).Debug("Successfully enriched with nationality")
 	} else {
@@ -48,9 +52,9 @@ func (s *EnrichmentService) EnrichPerson(person *models.Person) error {
 	return nil
 }
 
-func getAge(name string) (int, error) {
-	logrus.WithField("name", name).Debug("Fetching age from agify.io")
-	resp, err := http.Get("https://api.agify.io/?name=" + name)
+func getAge(name, apiURL string) (int, error) {
+	logrus.WithField("name", name).Debug("Fetching age")
+	resp, err := http.Get(apiURL + "/?name=" + name)
 	if err != nil {
 		return 0, err
 	}
@@ -78,9 +82,9 @@ func getAge(name string) (int, error) {
 	return result.Age, nil
 }
 
-func getGender(name string) (string, error) {
-	logrus.WithField("name", name).Debug("Fetching gender from genderize.io")
-	resp, err := http.Get("https://api.genderize.io/?name=" + name)
+func getGender(name, apiURL string) (string, error) {
+	logrus.WithField("name", name).Debug("Fetching gender")
+	resp, err := http.Get(apiURL + "/?name=" + name)
 	if err != nil {
 		return "", err
 	}
@@ -109,9 +113,9 @@ func getGender(name string) (string, error) {
 	return result.Gender, nil
 }
 
-func getNationality(name string) (string, error) {
-	logrus.WithField("name", name).Debug("Fetching nationality from nationalize.io")
-	resp, err := http.Get("https://api.nationalize.io/?name=" + name)
+func getNationality(name, apiURL string) (string, error) {
+	logrus.WithField("name", name).Debug("Fetching nationality")
+	resp, err := http.Get(apiURL + "/?name=" + name)
 	if err != nil {
 		return "", err
 	}

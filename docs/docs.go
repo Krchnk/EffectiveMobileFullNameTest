@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/persons": {
             "get": {
-                "description": "Returns a paginated list of persons with optional filters by name and surname",
+                "description": "Returns a paginated list of persons with optional filters",
                 "consumes": [
                     "application/json"
                 ],
@@ -53,6 +53,35 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Filter by surname",
                         "name": "surname",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by patronymic",
+                        "name": "patronymic",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by age",
+                        "name": "age",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "male",
+                            "female",
+                            "other"
+                        ],
+                        "type": "string",
+                        "description": "Filter by gender",
+                        "name": "gender",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by nationality",
+                        "name": "nationality",
                         "in": "query"
                     }
                 ],
@@ -221,6 +250,63 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "patch": {
+                "description": "Updates specific fields of an existing person by ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "persons"
+                ],
+                "summary": "Partially update a person",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Person ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "person",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.PersonPatch"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.Person"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Person not found",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
             }
         }
     },
@@ -240,10 +326,43 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "gender": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female",
+                        "other"
+                    ]
                 },
                 "id": {
                     "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "nationality": {
+                    "type": "string"
+                },
+                "patronymic": {
+                    "type": "string"
+                },
+                "surname": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PersonPatch": {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": "integer"
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female",
+                        "other"
+                    ]
                 },
                 "name": {
                     "type": "string"
